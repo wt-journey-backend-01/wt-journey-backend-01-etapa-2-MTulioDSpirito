@@ -1,6 +1,5 @@
 const agentesRepository = require('../repositories/agentesRepository');
-const joi = require('joi'); // Usaremos Joi para uma validação robusta (opcional, mas recomendado)
-// npm install joi
+const joi = require('joi');//nmp install joi
 
 const agenteSchema = joi.object({
   nome: joi.string().min(3).max(50).required(),
@@ -39,16 +38,16 @@ const agenteSchema = joi.object({
   cargo: joi.string().required()
 });
 
-
 const getAllAgentes = (req, res) => {
     let results = agentesRepository.findAll();
-    const { cargo, sort } = req.query;
+    const{cargo, sort} = req.query;
 
     if (cargo) {
-        results = results.filter(a => a.cargo.toLowerCase() === cargo.toLowerCase());
-    }
+    results = results.filter(agente => agente.cargo.toLowerCase() === cargo.toLowerCase());
+}
 
     if (sort) {
+
         const desc = sort.startsWith('-');
         const field = desc ? sort.substring(1) : sort;
         results.sort((a, b) => {
@@ -56,63 +55,68 @@ const getAllAgentes = (req, res) => {
             if (a[field] > b[field]) return desc ? -1 : 1;
             return 0;
         });
-    }
-
-    res.status(200).json(results);
+    } 
+res.status(200).json(results);
 };
 
 const getAgenteById = (req, res) => {
-    const agente = agentesRepository.findById(req.params.id);
+    const { id } = req.params;
+    const agente = agentesRepository.findById(id);
     if (!agente) {
-        return res.status(404).json({ message: "Agente não encontrado" });
+        return res.status(404).json({ message: 'Agente não encontrado' });
     }
     res.status(200).json(agente);
 };
 
 const createAgente = (req, res) => {
-    const { error, value } = agenteSchema.validate(req.body);
+    const { error,value } = agenteSchema.validate(req.body);
     if (error) {
-        return res.status(400).json({
-            status: 400,
-            message: "Parâmetros inválidos",
-            errors: error.details.map(err => ({ [err.path[0]]: err.message }))
-        });
+        return res.status(400).json({ message: "Dados inválidos", details: error.details  });
     }
 
     const newAgente = agentesRepository.create(value);
     res.status(201).json(newAgente);
-};
+} ;
 
 const updateAgente = (req, res) => {
-    const { error, value } = agenteSchema.validate(req.body); // PUT exige o objeto completo
+    const { id } = req.params;
+    const { error, value } = agenteSchema.validate(req.body);
     if (error) {
-        return res.status(400).json({
-            status: 400,
-            message: "Parâmetros inválidos",
-            errors: error.details.map(err => ({ [err.path[0]]: err.message }))
-        });
+        return res.status(400).json({ message: "Dados inválidos", details: error.details });
     }
 
-    const updatedAgente = agentesRepository.update(req.params.id, value);
+    const updatedAgente = agentesRepository.update(id, value);
     if (!updatedAgente) {
-        return res.status(404).json({ message: "Agente não encontrado" });
+        return res.status(404).json({ message: 'Agente não encontrado' });
     }
     res.status(200).json(updatedAgente);
 };
 
 const patchAgente = (req, res) => {
-    // Para PATCH, validamos apenas os campos presentes
-    const updatedAgente = agentesRepository.update(req.params.id, req.body);
+    const { id } = req.params;
+    const { nome, dataDeIncorporacao, cargo } = req.body;
+
+    if (!nome && !dataDeIncorporacao && !cargo) {
+        return res.status(400).json({ message: 'Pelo menos um campo deve ser fornecido para atualização' });
+    }
+
+    const agenteData = {};
+    if (nome) agenteData.nome = nome;
+    if (dataDeIncorporacao) agenteData.dataDeIncorporacao = dataDeIncorporacao;
+    if (cargo) agenteData.cargo = cargo;
+
+    const updatedAgente = agentesRepository.update(id, agenteData);
     if (!updatedAgente) {
-        return res.status(404).json({ message: "Agente não encontrado" });
+        return res.status(404).json({ message: 'Agente não encontrado' });
     }
     res.status(200).json(updatedAgente);
 };
 
 const deleteAgente = (req, res) => {
-    const success = agentesRepository.remove(req.params.id);
-    if (!success) {
-        return res.status(404).json({ message: "Agente não encontrado" });
+    const { id } = req.params;
+    const deleted = agentesRepository.remove(id);
+    if (!deleted) {
+        return res.status(404).json({ message: 'Agente não encontrado' });
     }
     res.status(204).send();
 };

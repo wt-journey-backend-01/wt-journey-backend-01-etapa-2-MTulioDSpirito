@@ -2,7 +2,12 @@ const { v4: uuidv4 } = require('uuid');
 
 let casos = [
     { id: "f5fb2ad5-22a8-4cb4-90f2-8733517a0d46", titulo: "Homicídio no Bairro União", descricao: "Disparos foram reportados, resultando na morte de um homem de 45 anos.", status: "aberto", agente_id: "401bccf5-cf9e-489d-8412-446cd169a0f1" },
-    { id: "c1a9b8e2-5c6a-4f8b-9e3d-7a6f5c4b3a21", titulo: "Roubo de Veículo", descricao: "Carro modelo sedan foi roubado a mão armada.", status: "solucionado", agente_id: "a2a16298-5192-492e-9481-9f2b1cce06c6" }
+    { id: "c1a9b8e2-5c6a-4f8b-9e3d-7a6f5c4b3a21", titulo: "Roubo de Veículo", descricao: "Carro modelo sedan foi roubado a mão armada.", status: "solucionado", agente_id: "a2a16298-5192-492e-9481-9f2b1cce06c6" },
+    {   id: "ddcd09c0-37e2-4c95-b162-99a567a09c59",
+        titulo: "Análise de Golpe Digital (Phishing)",
+		descricao: "Vítima relata ter clicado em um link falso de banco recebido por SMS em 23 de julho de 2025 e preenchido seus dados. Horas depois, uma transferência via PIX de alto valor foi realizada de sua conta. O caso está sob investigação para rastrear o destino dos fundos.",
+		status: "aberto",
+		agente_id: "83013a62-7eda-4e24-bcca-bd95dba36397"}
 ];
 
 const findAll = () => {

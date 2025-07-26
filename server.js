@@ -1,31 +1,29 @@
 const express = require('express');
 const swaggerUi = require('swagger-ui-express');
-const swaggerSpecs = require('./docs/swagger.js'); // Importa a config do Swagger
+const swaggerSpecs = require('./docs/swagger.js');
 
 const agentesRouter = require('./routes/agentesRoutes');
 const casosRouter = require('./routes/casosRoutes');
 
 const app = express();
+
 const PORT = 3000;
 
-// Middleware para interpretar JSON no corpo das requisições
 app.use(express.json());
 
-// Rota principal
+//Principal
 app.get('/', (req, res) => {
-    res.send('<h1>API do Departamento de Polícia</h1><p>Acesse <a href="/docs">/docs</a> para a documentação da API.</p>');
+  res.send('<h1>Bem-vindo à API do Departamento de Polícia!</h1><p>Acesse <a href="/docs">Docs</a> para o API. </p>');
 });
 
 
-// Rota para a documentação da API gerada pelo Swagger
+//Api Swagger
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 
-// Registra as rotas da aplicação
-app.use(agentesRouter);
-app.use(casosRouter);
+app.use('/agentes', agentesRouter);
+app.use('/casos', casosRouter);
 
-// Inicia o servidor
 app.listen(PORT, () => {
-    console.log(`Servidor do Departamento de Polícia rodando em http://localhost:${PORT}`);
-    console.log(`Documentação disponível em http://localhost:${PORT}/docs`);
+  console.log(`Servidor do Departamento de Polícia rodando em http://localhost:${PORT}`);
 });
+            

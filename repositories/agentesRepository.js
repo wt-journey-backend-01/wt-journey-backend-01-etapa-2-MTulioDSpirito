@@ -2,6 +2,8 @@ const { v4: uuidv4 } = require('uuid');
 
 // Simulação de banco de dados em memória
 let agentes = [
+
+    {id: "83013a62-7eda-4e24-bcca-bd95dba36397", nome: "Carlos Silva", dataDeIncorporacao: "2010-01-15", cargo: "investigador"},
     { id: "401bccf5-cf9e-489d-8412-446cd169a0f1", nome: "Rommel Carneiro", dataDeIncorporacao: "1992-10-04", cargo: "delegado" },
     { id: "a2a16298-5192-492e-9481-9f2b1cce06c6", nome: "Ana Pereira", dataDeIncorporacao: "2015-03-12", cargo: "inspetor" }
 ];
