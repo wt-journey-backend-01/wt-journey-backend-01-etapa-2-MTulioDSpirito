@@ -1,29 +1,29 @@
-const express = require('express');
-const swaggerUi = require('swagger-ui-express');
-const swaggerSpecs = require('./docs/swagger.js');
+import express from 'express';
+import dotenv from 'dotenv';
+import swaggerUi from 'swagger-ui-express';
 
-const agentesRouter = require('./routes/agentesRoutes');
-const casosRouter = require('./routes/casosRoutes');
+import agentesRoutes from './routes/agentesRoutes.js';
+import casosRoutes from './routes/casosRoutes.js';
+import swaggerSpec from './docs/swagger.js';
+import { errorHandler } from './utils/errorHandler.js';
+
+dotenv.config();
 
 const app = express();
 
-const PORT = 3000;
-
 app.use(express.json());
 
-//Principal
-app.get('/', (req, res) => {
-  res.send('<h1>Bem-vindo à API do Departamento de Polícia!</h1><p>Acesse <a href="/docs">Docs</a> para o API. </p>');
-});
+// Rotas
+app.use('/agentes', agentesRoutes);
+app.use('/casos', casosRoutes);
 
+// Swagger UI
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-//Api Swagger
-app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
+// Middleware de erro
+app.use(errorHandler);
 
-app.use('/agentes', agentesRouter);
-app.use('/casos', casosRouter);
-
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Servidor do Departamento de Polícia rodando em http://localhost:${PORT}`);
+  console.log(`Servidor rodando na porta ${PORT}`);
 });
-            

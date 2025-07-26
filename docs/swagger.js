@@ -1,27 +1,16 @@
-const swaggerJsdoc = require('swagger-jsdoc');
+import swaggerJsdoc from 'swagger-jsdoc';
 
 const options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'API do Departamento de Polícia',
+      title: 'API Polícia - Casos e Agentes',
       version: '1.0.0',
-      description: 'API RESTful para gerenciamento de casos e agentes policiais.',
+      description: 'API para gerenciamento de agentes e casos policiais',
     },
     servers: [
       {
         url: 'http://localhost:3000',
-        description: 'Servidor de Desenvolvimento',
-      },
-    ],
-    tags: [
-      {
-        name: 'Agentes',
-        description: 'Operações relacionadas aos agentes policiais.',
-      },
-      {
-        name: 'Casos',
-        description: 'Operações relacionadas aos casos investigativos.',
       },
     ],
     components: {
@@ -29,92 +18,65 @@ const options = {
         Agente: {
           type: 'object',
           properties: {
-            id: {
-              type: 'string',
-              format: 'uuid',
-              description: 'ID único do agente.',
-            },
-            nome: {
-              type: 'string',
-              description: 'Nome do agente.',
-            },
-            dataDeIncorporacao: {
-              type: 'string',
-              format: 'date',
-              description: 'Data de entrada (YYYY-MM-DD).',
-            },
-            cargo: {
-              type: 'string',
-              description: 'Cargo do agente.',
-            },
+            id: { type: 'string', format: 'uuid' },
+            nome: { type: 'string' },
+            dataDeIncorporacao: { type: 'string', format: 'date' },
+            cargo: { type: 'string' },
           },
+          required: ['id', 'nome', 'dataDeIncorporacao', 'cargo'],
         },
         AgenteInput: {
           type: 'object',
-          required: ['nome', 'dataDeIncorporacao', 'cargo'],
           properties: {
-            nome: {
-              type: 'string',
-              example: 'Sérgio Oliveira',
-            },
-            dataDeIncorporacao: {
-              type: 'string',
-              format: 'date',
-              example: '2021-09-15',
-            },
-            cargo: {
-              type: 'string',
-              example: 'Detetive',
-            },
+            nome: { type: 'string' },
+            dataDeIncorporacao: { type: 'string', format: 'date' },
+            cargo: { type: 'string', enum: ['inspetor', 'delegado', 'outro'] },
           },
+          required: ['nome', 'dataDeIncorporacao', 'cargo'],
         },
         Caso: {
           type: 'object',
           properties: {
-            id: {
-              type: 'string',
-              format: 'uuid',
-              description: 'ID único do caso.',
-            },
-            titulo: {
-              type: 'string',
-            },
-            descricao: {
-              type: 'string',
-            },
-            status: {
-              type: 'string',
-              enum: ['aberto', 'em andamento', 'solucionado'],
-            },
-            agente_id: {
-              type: 'string',
-              format: 'uuid',
-              description: 'ID do agente responsável.',
-            },
+            id: { type: 'string', format: 'uuid' },
+            titulo: { type: 'string' },
+            descricao: { type: 'string' },
+            status: { type: 'string', enum: ['aberto', 'solucionado'] },
+            agente_id: { type: 'string', format: 'uuid' },
           },
+          required: ['id', 'titulo', 'descricao', 'status', 'agente_id'],
         },
         CasoInput: {
           type: 'object',
-          required: ['titulo', 'descricao', 'status', 'agente_id'],
           properties: {
-            titulo: {
-              type: 'string',
-              example: 'Investigação de Fraude',
+            titulo: { type: 'string' },
+            descricao: { type: 'string' },
+            status: { type: 'string', enum: ['aberto', 'solucionado'] },
+            agente_id: { type: 'string', format: 'uuid' },
+          },
+          required: ['titulo', 'descricao', 'status', 'agente_id'],
+        },
+        ErroValidacao: {
+          type: 'object',
+          properties: {
+            status: { type: 'integer', example: 400 },
+            message: { type: 'string', example: 'Parâmetros inválidos' },
+            errors: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: { type: 'string' },
+              },
+              example: [
+                { status: "O campo 'status' pode ser somente 'aberto' ou 'solucionado'" },
+              ],
             },
-            descricao: {
-              type: 'string',
-              example: 'Vítima reportou transações suspeitas.',
-            },
-            status: {
-              type: 'string',
-              enum: ['aberto', 'em andamento', 'solucionado'],
-              example: 'aberto',
-            },
-            agente_id: {
-              type: 'string',
-              format: 'uuid',
-              example: 'c4a3b2e1-d5f6-4a7b-8c9d-0e1f2a3b4c5d',
-            },
+          },
+        },
+        Erro404: {
+          type: 'object',
+          properties: {
+            status: { type: 'integer', example: 404 },
+            message: { type: 'string', example: 'Recurso não encontrado' },
           },
         },
       },
@@ -123,5 +85,6 @@ const options = {
   apis: ['./routes/*.js'],
 };
 
-const specs = swaggerJsdoc(options);
-module.exports = specs;
+const swaggerSpec = swaggerJsdoc(options);
+
+export default swaggerSpec;

@@ -1,122 +1,113 @@
-const agentesRepository = require('../repositories/agentesRepository');
-const joi = require('joi');
+import { v4 as uuidv4 } from 'uuid';
+import agentesRepo from '../repositories/agentesRepository.js';
 
-// Schema para criação/atualização completa (PUT)
-const agenteSchema = joi.object({
-  nome: joi.string().min(3).required().messages({
-    'string.min': 'O campo nome deve ter no mínimo 3 caracteres.',
-    'any.required': 'O campo nome é obrigatório.'
-  }),
-  dataDeIncorporacao: joi.date().iso().required().messages({
-    'date.format': 'Data de incorporação deve estar no formato YYYY-MM-DD.',
-    'any.required': 'O campo dataDeIncorporacao é obrigatório.'
-  }),
-  cargo: joi.string().required().messages({
-    'any.required': 'O campo cargo é obrigatório.'
-  })
-});
-
-// CORREÇÃO 1: Schema para atualização parcial (PATCH)
-// Nenhum campo é obrigatório, mas pelo menos um deve ser enviado.
-const agentePatchSchema = joi.object({
-  nome: joi.string().min(3).messages({
-    'string.min': 'O campo nome deve ter no mínimo 3 caracteres.'
-  }),
-  dataDeIncorporacao: joi.date().iso().messages({
-    'date.format': 'Data de incorporação deve estar no formato YYYY-MM-DD.'
-  }),
-  cargo: joi.string()
-}).min(1).messages({ // Garante que o corpo da requisição não esteja vazio
-  'object.min': 'Pelo menos um campo deve ser fornecido para atualização.'
-});
-
-const getAllAgentes = (req, res) => {
-  let results = agentesRepository.findAll();
-  const { cargo, sort } = req.query;
-
-  if (cargo) {
-    results = results.filter(agente => agente.cargo.toLowerCase() === cargo.toLowerCase());
+function validarAgente(data) {
+  const errors = [];
+  if (!data.nome || typeof data.nome !== 'string') {
+    errors.push({ nome: 'Nome é obrigatório e deve ser string' });
   }
-
-  // CORREÇÃO 5: Lógica de ordenação aprimorada para datas
-  if (sort) {
-    const desc = sort.startsWith('-');
-    const field = desc ? sort.substring(1) : sort;
-    results.sort((a, b) => {
-      let aValue = a[field];
-      let bValue = b[field];
-      if (field === 'dataDeIncorporacao') {
-        aValue = new Date(aValue);
-        bValue = new Date(bValue);
-      }
-      if (aValue < bValue) return desc ? 1 : -1;
-      if (aValue > bValue) return desc ? -1 : 1;
-      return 0;
-    });
+  if (
+    !data.dataDeIncorporacao ||
+    isNaN(Date.parse(data.dataDeIncorporacao))
+  ) {
+    errors.push({ dataDeIncorporacao: 'Data válida de incorporação é obrigatória' });
   }
-  res.status(200).json(results);
-};
-
-const getAgenteById = (req, res) => {
-  const { id } = req.params;
-  const agente = agentesRepository.findById(id);
-  if (!agente) {
-    return res.status(404).json({ message: 'Agente não encontrado' });
+  const cargosValidos = ['inspetor', 'delegado', 'outro'];
+  if (!cargosValidos.includes(data.cargo)) {
+    errors.push({ cargo: `Cargo inválido. Deve ser um de: ${cargosValidos.join(', ')}` });
   }
-  res.status(200).json(agente);
-};
+  return errors;
+}
 
-const createAgente = (req, res) => {
-  const { error, value } = agenteSchema.validate(req.body);
-  if (error) {
-    return res.status(400).json({ message: "Dados inválidos", details: error.details.map(d => d.message) });
+export async function getAgentes(req, res, next) {
+  try {
+    const { cargo, sort } = req.query;
+    const agentes = await agentesRepo.findAll({ cargo, sort });
+    res.status(200).json(agentes);
+  } catch (error) {
+    next(error);
   }
-  const newAgente = agentesRepository.create(value);
-  res.status(201).json(newAgente);
-};
+}
 
-const updateAgente = (req, res) => {
-  const { id } = req.params;
-  const { error, value } = agenteSchema.validate(req.body);
-  if (error) {
-    return res.status(400).json({ message: "Dados inválidos", details: error.details.map(d => d.message) });
+export async function getAgenteById(req, res, next) {
+  try {
+    const agente = await agentesRepo.findById(req.params.id);
+    if (!agente) {
+      return res.status(404).json({ status: 404, message: 'Agente não encontrado' });
+    }
+    res.status(200).json(agente);
+  } catch (error) {
+    next(error);
   }
-  const updatedAgente = agentesRepository.update(id, value);
-  if (!updatedAgente) {
-    return res.status(404).json({ message: 'Agente não encontrado' });
-  }
-  res.status(200).json(updatedAgente);
-};
+}
 
-const patchAgente = (req, res) => {
-  const { id } = req.params;
-  // CORREÇÃO 1: Usando o schema de PATCH para validar
-  const { error, value } = agentePatchSchema.validate(req.body);
-  if (error) {
-    return res.status(400).json({ message: "Dados inválidos", details: error.details.map(d => d.message) });
-  }
+export async function createAgente(req, res, next) {
+  try {
+    const errors = validarAgente(req.body);
+    if (errors.length > 0) {
+      return res.status(400).json({ status: 400, message: 'Parâmetros inválidos', errors });
+    }
 
-  const updatedAgente = agentesRepository.update(id, value);
-  if (!updatedAgente) {
-    return res.status(404).json({ message: 'Agente não encontrado' });
-  }
-  res.status(200).json(updatedAgente);
-};
+    const novoAgente = {
+      id: uuidv4(),
+      nome: req.body.nome,
+      dataDeIncorporacao: req.body.dataDeIncorporacao,
+      cargo: req.body.cargo,
+    };
 
-const deleteAgente = (req, res) => {
-  const { id } = req.params;
-  const deleted = agentesRepository.remove(id);
-  if (!deleted) {
-    return res.status(404).json({ message: 'Agente não encontrado' });
+    await agentesRepo.create(novoAgente);
+    res.status(201).json(novoAgente);
+  } catch (error) {
+    next(error);
   }
-  res.status(204).send();
-};
+}
 
-module.exports = {
-  getAllAgentes,
-  getAgenteById,
-  createAgente,
-  updateAgente,
-  patchAgente,
-  deleteAgente
-};
+export async function updateAgente(req, res, next) {
+  try {
+    const errors = validarAgente(req.body);
+    if (errors.length > 0) {
+      return res.status(400).json({ status: 400, message: 'Parâmetros inválidos', errors });
+    }
+
+    const agenteAtualizado = await agentesRepo.update(req.params.id, req.body);
+    if (!agenteAtualizado) {
+      return res.status(404).json({ status: 404, message: 'Agente não encontrado' });
+    }
+
+    res.status(200).json(agenteAtualizado);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function partialUpdateAgente(req, res, next) {
+  try {
+    const agenteExistente = await agentesRepo.findById(req.params.id);
+    if (!agenteExistente) {
+      return res.status(404).json({ status: 404, message: 'Agente não encontrado' });
+    }
+
+    const dadosAtualizados = { ...agenteExistente, ...req.body };
+    const errors = validarAgente(dadosAtualizados);
+    if (errors.length > 0) {
+      return res.status(400).json({ status: 400, message: 'Parâmetros inválidos', errors });
+    }
+
+    const agenteAtualizado = await agentesRepo.update(req.params.id, req.body);
+    res.status(200).json(agenteAtualizado);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function deleteAgente(req, res, next) {
+  try {
+    const sucesso = await agentesRepo.remove(req.params.id);
+    if (!sucesso) {
+      return res.status(404).json({ status: 404, message: 'Agente não encontrado' });
+    }
+    res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+}

@@ -1,32 +1,44 @@
-// routes/agentesRoutes.js
-const express = require('express');
+import express from 'express';
+import {
+  getAgentes,
+  getAgenteById,
+  createAgente,
+  updateAgente,
+  partialUpdateAgente,
+  deleteAgente,
+} from '../controllers/agentesController.js';
+
 const router = express.Router();
-const agentesController = require('../controllers/agentesController');
+
+/**
+ * @swagger
+ * tags:
+ *   name: Agentes
+ *   description: API para gerenciamento de agentes policiais
+ */
 
 /**
  * @swagger
  * /agentes:
  *   get:
- *     summary: Lista todos os agentes com filtros opcionais
+ *     summary: Lista todos os agentes
  *     tags: [Agentes]
- *     description: Retorna todos os agentes cadastrados, com suporte a filtro por cargo e ordenação por campos como data de incorporação.
  *     parameters:
  *       - in: query
  *         name: cargo
  *         schema:
  *           type: string
- *         required: false
- *         description: Filtra os agentes pelo cargo (ex: "Detetive").
+ *           enum: [inspetor, delegado, outro]
+ *         description: Filtra agentes por cargo
  *       - in: query
  *         name: sort
  *         schema:
  *           type: string
- *           example: dataDeIncorporacao
- *         required: false
- *         description: Ordena os agentes pelo campo desejado. Use o prefixo "-" para ordem decrescente (ex: -dataDeIncorporacao).
+ *           enum: [dataDeIncorporacao, -dataDeIncorporacao]
+ *         description: Ordena agentes por data de incorporação
  *     responses:
  *       200:
- *         description: Lista de agentes retornada com sucesso.
+ *         description: Lista de agentes
  *         content:
  *           application/json:
  *             schema:
@@ -34,7 +46,36 @@ const agentesController = require('../controllers/agentesController');
  *               items:
  *                 $ref: '#/components/schemas/Agente'
  */
-router.get('/', agentesController.getAllAgentes);
+router.get('/', getAgentes);
+
+/**
+ * @swagger
+ * /agentes/{id}:
+ *   get:
+ *     summary: Retorna um agente pelo ID
+ *     tags: [Agentes]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Agente encontrado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Agente'
+ *       404:
+ *         description: Agente não encontrado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Erro404'
+ */
+router.get('/:id', getAgenteById);
 
 /**
  * @swagger
@@ -42,63 +83,34 @@ router.get('/', agentesController.getAllAgentes);
  *   post:
  *     summary: Cria um novo agente
  *     tags: [Agentes]
- *     description: Cadastra um novo agente no sistema.
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/AgenteInput'
- *           example:
- *             nome: "Sérgio Oliveira"
- *             dataDeIncorporacao: "2021-09-15"
- *             cargo: "Detetive"
  *     responses:
  *       201:
- *         description: Agente criado com sucesso.
+ *         description: Agente criado
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Agente'
  *       400:
- *         description: Dados fornecidos são inválidos.
- */
-router.post('/', agentesController.createAgente);
-
-/**
- * @swagger
- * /agentes/{id}:
- *   get:
- *     summary: Retorna um agente específico
- *     tags: [Agentes]
- *     description: Busca e retorna os dados de um agente pelo seu ID (UUID).
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: ID (UUID) do agente.
- *     responses:
- *       200:
- *         description: Detalhes do agente.
+ *         description: Parâmetros inválidos
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Agente'
- *       404:
- *         description: Agente não encontrado.
+ *               $ref: '#/components/schemas/ErroValidacao'
  */
-router.get('/:id', agentesController.getAgenteById);
+router.post('/', createAgente);
 
 /**
  * @swagger
  * /agentes/{id}:
  *   put:
- *     summary: Atualiza um agente por completo (PUT)
+ *     summary: Atualiza um agente por completo
  *     tags: [Agentes]
- *     description: Atualiza todos os dados de um agente existente. Requer que todos os campos sejam enviados.
  *     parameters:
  *       - in: path
  *         name: id
@@ -106,7 +118,6 @@ router.get('/:id', agentesController.getAgenteById);
  *         schema:
  *           type: string
  *           format: uuid
- *         description: ID (UUID) do agente a ser atualizado.
  *     requestBody:
  *       required: true
  *       content:
@@ -115,23 +126,32 @@ router.get('/:id', agentesController.getAgenteById);
  *             $ref: '#/components/schemas/AgenteInput'
  *     responses:
  *       200:
- *         description: Agente atualizado com sucesso.
+ *         description: Agente atualizado
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Agente'
+ *       400:
+ *         description: Parâmetros inválidos
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErroValidacao'
  *       404:
- *         description: Agente não encontrado.
+ *         description: Agente não encontrado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Erro404'
  */
-router.put('/:id', agentesController.updateAgente);
+router.put('/:id', updateAgente);
 
 /**
  * @swagger
  * /agentes/{id}:
  *   patch:
- *     summary: Atualiza um agente parcialmente (PATCH)
+ *     summary: Atualiza um agente parcialmente
  *     tags: [Agentes]
- *     description: Atualiza um ou mais campos de um agente existente.
  *     parameters:
  *       - in: path
  *         name: id
@@ -139,7 +159,6 @@ router.put('/:id', agentesController.updateAgente);
  *         schema:
  *           type: string
  *           format: uuid
- *         description: ID (UUID) do agente a ser atualizado.
  *     requestBody:
  *       required: true
  *       content:
@@ -154,17 +173,28 @@ router.put('/:id', agentesController.updateAgente);
  *                 format: date
  *               cargo:
  *                 type: string
+ *                 enum: [inspetor, delegado, outro]
  *     responses:
  *       200:
- *         description: Agente atualizado com sucesso.
+ *         description: Agente atualizado parcialmente
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Agente'
+ *       400:
+ *         description: Parâmetros inválidos
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErroValidacao'
  *       404:
- *         description: Agente não encontrado.
+ *         description: Agente não encontrado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Erro404'
  */
-router.patch('/:id', agentesController.patchAgente);
+router.patch('/:id', partialUpdateAgente);
 
 /**
  * @swagger
@@ -172,7 +202,6 @@ router.patch('/:id', agentesController.patchAgente);
  *   delete:
  *     summary: Remove um agente
  *     tags: [Agentes]
- *     description: Remove um agente do sistema pelo seu ID (UUID).
  *     parameters:
  *       - in: path
  *         name: id
@@ -180,13 +209,16 @@ router.patch('/:id', agentesController.patchAgente);
  *         schema:
  *           type: string
  *           format: uuid
- *         description: ID (UUID) do agente a ser removido.
  *     responses:
  *       204:
- *         description: Agente removido com sucesso (sem conteúdo de resposta).
+ *         description: Agente removido com sucesso
  *       404:
- *         description: Agente não encontrado.
+ *         description: Agente não encontrado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Erro404'
  */
-router.delete('/:id', agentesController.deleteAgente);
+router.delete('/:id', deleteAgente);
 
-module.exports = router;
+export default router;
