@@ -1,23 +1,7 @@
-import express from 'express';
-import {
-  getCasos,
-  getCasoById,
-  createCaso,
-  updateCaso,
-  partialUpdateCaso,
-  deleteCaso,
-  getAgenteByCaso,
-  searchCasos,
-} from '../controllers/casosController.js';
-
+// routes/casosRoutes.js
+const express = require('express');
 const router = express.Router();
-
-/**
- * @swagger
- * tags:
- *   name: Casos
- *   description: API para gerenciamento de casos policiais
- */
+const casosController = require('../controllers/casosController');
 
 /**
  * @swagger
@@ -25,22 +9,28 @@ const router = express.Router();
  *   get:
  *     summary: Lista todos os casos
  *     tags: [Casos]
+ *     description: Retorna uma lista de casos, com filtros por agente, status ou busca textual.
  *     parameters:
+ *       - in: query
+ *         name: agente_id
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Filtra casos por ID do agente responsável.
  *       - in: query
  *         name: status
  *         schema:
  *           type: string
- *           enum: [aberto, em_andamento, fechado]
- *         description: Filtra casos por status
+ *           enum: [aberto, em andamento, solucionado]
+ *         description: Filtra casos pelo status.
  *       - in: query
- *         name: sort
+ *         name: q
  *         schema:
  *           type: string
- *           enum: [dataDeCriacao, -dataDeCriacao]
- *         description: Ordena casos por data de criação
+ *         description: Busca full-text no título e descrição do caso.
  *     responses:
  *       200:
- *         description: Lista de casos
+ *         description: Lista de casos.
  *         content:
  *           application/json:
  *             schema:
@@ -48,42 +38,13 @@ const router = express.Router();
  *               items:
  *                 $ref: '#/components/schemas/Caso'
  */
-router.get('/', getCasos);
-
-/**
- * @swagger
- * /casos/{id}:
- *   get:
- *     summary: Retorna um caso pelo ID
- *     tags: [Casos]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *     responses:
- *       200:
- *         description: Caso encontrado
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Caso'
- *       404:
- *         description: Caso não encontrado
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Erro404'
- */
-router.get('/:id', getCasoById);
+router.get('/', casosController.getAllCasos);
 
 /**
  * @swagger
  * /casos:
  *   post:
- *     summary: Cria um novo caso
+ *     summary: Cria um novo caso policial
  *     tags: [Casos]
  *     requestBody:
  *       required: true
@@ -93,19 +54,101 @@ router.get('/:id', getCasoById);
  *             $ref: '#/components/schemas/CasoInput'
  *     responses:
  *       201:
- *         description: Caso criado
+ *         description: Caso criado com sucesso.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Caso'
  *       400:
- *         description: Parâmetros inválidos
+ *         description: Dados inválidos.
+ */
+router.post('/', casosController.createCaso);
+
+/**
+ * @swagger
+ * /casos/search:
+ *   get:
+ *     summary: Busca casos por termo
+ *     tags: [Casos]
+ *     description: Retorna uma lista de casos cujo título ou descrição contenham o termo de busca.
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Termo a ser buscado no título e na descrição dos casos.
+ *     responses:
+ *       200:
+ *         description: Busca realizada com sucesso.
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ErroValidacao'
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Caso'
+ *       400:
+ *         description: O parâmetro de busca 'q' não foi fornecido.
  */
-router.post('/', createCaso);
+router.get('/search', casosController.searchCasos);
+
+/**
+ * @swagger
+ * /casos/{id}:
+ *   get:
+ *     summary: Retorna um caso específico
+ *     tags: [Casos]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID do caso.
+ *       - in: query
+ *         name: agente_id
+ *         schema:
+ *           type: string
+ *         description: (Bônus) Se presente, retorna os dados do agente responsável pelo caso em vez do caso.
+ *     responses:
+ *       200:
+ *         description: Detalhes do caso ou do agente.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Caso'
+ *       404:
+ *         description: Caso não encontrado.
+ */
+router.get('/:id', casosController.getCasoById);
+
+/**
+ * @swagger
+ * /casos/{id}/agente:
+ *   get:
+ *     summary: Retorna o agente responsável por um caso
+ *     tags: [Casos]
+ *     description: Busca os dados completos do agente associado a um caso específico.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID (UUID) do caso.
+ *     responses:
+ *       200:
+ *         description: Dados do agente retornados com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Agente'
+ *       404:
+ *         description: Caso ou agente responsável não encontrado.
+ */
+router.get('/:id/agente', casosController.getAgenteDoCaso);
 
 /**
  * @swagger
@@ -119,7 +162,6 @@ router.post('/', createCaso);
  *         required: true
  *         schema:
  *           type: string
- *           format: uuid
  *     requestBody:
  *       required: true
  *       content:
@@ -128,25 +170,17 @@ router.post('/', createCaso);
  *             $ref: '#/components/schemas/CasoInput'
  *     responses:
  *       200:
- *         description: Caso atualizado
+ *         description: Caso atualizado.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Caso'
  *       400:
- *         description: Parâmetros inválidos
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErroValidacao'
+ *         description: Dados inválidos.
  *       404:
- *         description: Caso não encontrado
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Erro404'
+ *         description: Caso não encontrado.
  */
-router.put('/:id', updateCaso);
+router.put('/:id', casosController.updateCaso);
 
 /**
  * @swagger
@@ -160,7 +194,6 @@ router.put('/:id', updateCaso);
  *         required: true
  *         schema:
  *           type: string
- *           format: uuid
  *     requestBody:
  *       required: true
  *       content:
@@ -174,31 +207,21 @@ router.put('/:id', updateCaso);
  *                 type: string
  *               status:
  *                 type: string
- *                 enum: [aberto, em_andamento, fechado]
+ *                 enum: [aberto, em andamento, solucionado]
  *               agente_id:
  *                 type: string
  *                 format: uuid
  *     responses:
  *       200:
- *         description: Caso atualizado parcialmente
+ *         description: Caso atualizado.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Caso'
- *       400:
- *         description: Parâmetros inválidos
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErroValidacao'
  *       404:
- *         description: Caso não encontrado
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Erro404'
+ *         description: Caso não encontrado.
  */
-router.patch('/:id', partialUpdateCaso);
+router.patch('/:id', casosController.patchCaso);
 
 /**
  * @swagger
@@ -212,71 +235,12 @@ router.patch('/:id', partialUpdateCaso);
  *         required: true
  *         schema:
  *           type: string
- *           format: uuid
  *     responses:
  *       204:
- *         description: Caso removido com sucesso
+ *         description: Caso removido com sucesso.
  *       404:
- *         description: Caso não encontrado
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Erro404'
+ *         description: Caso não encontrado.
  */
-router.delete('/:id', deleteCaso);
+router.delete('/:id', casosController.deleteCaso);
 
-/**
- * @swagger
- * /casos/{caso_id}/agente:
- *   get:
- *     summary: Retorna o agente responsável pelo caso
- *     tags: [Casos]
- *     parameters:
- *       - in: path
- *         name: caso_id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *     responses:
- *       200:
- *         description: Agente responsável encontrado
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Agente'
- *       404:
- *         description: Caso ou agente não encontrado
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Erro404'
- */
-router.get('/:caso_id/agente', getAgenteByCaso);
-
-/**
- * @swagger
- * /casos/search:
- *   get:
- *     summary: Pesquisa casos pelo título ou descrição
- *     tags: [Casos]
- *     parameters:
- *       - in: query
- *         name: q
- *         required: true
- *         schema:
- *           type: string
- *         description: Termo de pesquisa
- *     responses:
- *       200:
- *         description: Resultados da pesquisa
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Caso'
- */
-router.get('/search', searchCasos);
-
-export default router;
+module.exports = router;
