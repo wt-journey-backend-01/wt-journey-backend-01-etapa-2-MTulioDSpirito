@@ -16,6 +16,7 @@ const casosController = require('../controllers/casosController');
  *         schema:
  *           type: string
  *           format: uuid
+ *           example: "e6b7c93e-bf6e-4a92-a8db-46c14d0d8a8d"
  *         description: Filtra casos por ID do agente responsável.
  *       - in: query
  *         name: status
@@ -27,6 +28,7 @@ const casosController = require('../controllers/casosController');
  *         name: q
  *         schema:
  *           type: string
+ *           example: assalto
  *         description: Busca full-text no título e descrição do caso.
  *     responses:
  *       200:

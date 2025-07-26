@@ -7,9 +7,23 @@ const agentesController = require('../controllers/agentesController');
  * @swagger
  * /agentes:
  *   get:
- *     summary: Lista todos os agentes
+ *     summary: Lista todos os agentes com filtros opcionais
  *     tags: [Agentes]
- *     description: Retorna uma lista de todos os agentes cadastrados.
+ *     description: Retorna todos os agentes cadastrados, com suporte a filtro por cargo e ordenação por campos como data de incorporação.
+ *     parameters:
+ *       - in: query
+ *         name: cargo
+ *         schema:
+ *           type: string
+ *         required: false
+ *         description: Filtra os agentes pelo cargo (ex: "Detetive").
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           example: dataDeIncorporacao
+ *         required: false
+ *         description: Ordena os agentes pelo campo desejado. Use o prefixo "-" para ordem decrescente (ex: -dataDeIncorporacao).
  *     responses:
  *       200:
  *         description: Lista de agentes retornada com sucesso.
