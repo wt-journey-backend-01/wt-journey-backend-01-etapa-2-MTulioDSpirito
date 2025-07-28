@@ -38,36 +38,37 @@ const agenteSchema = joi.object({
   cargo: joi.string().required()
 });
 
+
+
 const getAllAgentes = (req, res) => {
     let results = agentesRepository.findAll();
-    const{cargo, sort} = req.query;
+    const { cargo, sort, dataDeIncorporacao } = req.query;
 
     if (cargo) {
-    results = results.filter(agente => agente.cargo.toLowerCase() === cargo.toLowerCase());
-}
+        results = results.filter(a => a.cargo.toLowerCase() === cargo.toLowerCase());
+    }
+
+    if (dataDeIncorporacao) {
+        const data = new Date(dataDeIncorporacao);
+        if (isNaN(data.getTime())) {
+            return res.status(400).json({ message: 'dataDeIncorporacao inválida. Use o formato yyyy-mm-dd.' });
+        }
+        results = results.filter(a => new Date(a.dataDeIncorporacao) >= data);
+    }
 
     if (sort) {
-    const desc = sort.startsWith('-');
-    const field = desc ? sort.substring(1) : sort;
+        const desc = sort.startsWith('-');
+        const field = desc ? sort.substring(1) : sort;
+        results.sort((a, b) => {
+            if (a[field] < b[field]) return desc ? 1 : -1;
+            if (a[field] > b[field]) return desc ? -1 : 1;
+            return 0;
+        });
+    }
 
-    results.sort((a, b) => {
-        let aValue = a[field];
-        let bValue = b[field];
-
-        // Conversão para Date se estiver ordenando por data
-        if (field === 'dataDeIncorporacao') {
-            aValue = new Date(aValue);
-            bValue = new Date(bValue);
-        }
-
-        if (aValue < bValue) return desc ? 1 : -1;
-        if (aValue > bValue) return desc ? -1 : 1;
-        return 0;
-    });
-}
-
-res.status(200).json(results);
+    res.status(200).json(results);
 };
+
 
 const getAgenteById = (req, res) => {
     const { id } = req.params;
