@@ -9,35 +9,47 @@ const casosController = require('../controllers/casosController');
  *   get:
  *     summary: Lista todos os casos
  *     tags: [Casos]
- *     description: Retorna uma lista de casos, com filtros por agente, status ou busca textual.
+ *     description: >
+ *       Retorna uma lista de casos policiais. É possível aplicar filtros por ID do agente, status do caso e palavras-chave no título ou descrição.
+ *       A busca textual é case-insensitive e permite trechos parciais.
+ *
  *     parameters:
  *       - in: query
  *         name: agente_id
  *         schema:
  *           type: string
  *           format: uuid
- *         description: Filtra casos por ID do agente responsável.
+ *         required: false
+ *         description: Filtra os casos pelo ID do agente responsável.
  *       - in: query
  *         name: status
  *         schema:
  *           type: string
  *           enum: [aberto, em andamento, solucionado]
- *         description: Filtra casos pelo status.
+ *         required: false
+ *         description: Filtra os casos pelo status atual.
  *       - in: query
  *         name: q
  *         schema:
  *           type: string
- *         description: Busca full-text no título e descrição do caso.
+ *         required: false
+ *         description: >
+ *           Termo de busca textual no título ou descrição do caso. A busca ignora diferenças entre maiúsculas e minúsculas.
+ *           Exemplo: `?q=roubo` retorna todos os casos que contenham "roubo" no título ou na descrição.
+ *
  *     responses:
  *       200:
- *         description: Lista de casos.
+ *         description: Lista de casos encontrados com base nos filtros aplicados.
  *         content:
  *           application/json:
  *             schema:
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/Caso'
+ *       400:
+ *         description: Parâmetros de consulta inválidos.
  */
+
 router.get('/', casosController.getAllCasos);
 
 /**

@@ -4,13 +4,28 @@ const joi = require('joi');
 
 
 const casoSchema = joi.object({
-    titulo: joi.string().required(),
-    descricao: joi.string().required(),
-    status: joi.string().valid('aberto', 'em andamento', 'solucionado').required().messages({
-        'any.only': 'Status deve ser um dos seguintes: aberto, em andamento, solucionado'
+    titulo: joi.string().required().messages({
+        'string.base': 'O título deve ser um texto.',
+        'string.empty': 'O título é obrigatório.',
+        'any.required': 'O título é obrigatório.'
     }),
-    agente_id: joi.string().guid({ version: 'uuidv4' }).required()
+    descricao: joi.string().required().messages({
+        'string.base': 'A descrição deve ser um texto.',
+        'string.empty': 'A descrição é obrigatória.',
+        'any.required': 'A descrição é obrigatória.'
+    }),
+    status: joi.string().valid('aberto', 'em andamento', 'solucionado').required().messages({
+        'any.only': 'Status deve ser um dos seguintes: aberto, em andamento, solucionado.',
+        'string.empty': 'O status é obrigatório.',
+        'any.required': 'O status é obrigatório.'
+    }),
+    agente_id: joi.string().guid({ version: 'uuidv4' }).required().messages({
+        'string.guid': 'O agente_id deve ser um UUID válido.',
+        'string.empty': 'O agente_id é obrigatório.',
+        'any.required': 'O agente_id é obrigatório.'
+    })
 });
+
 
 const getAllCasos = (req, res) => {
     let results = casosRepository.findAll();
@@ -55,26 +70,28 @@ const searchCasos = (req, res) => {
 };
 
 
-
-
 const getAgenteDoCaso = (req, res) => {
-    // 1. Encontra o caso pelo ID da rota
-    const caso = casosRepository.findById(req.params.id);
+    const { id } = req.params;
 
+    // Validação inicial
+    if (!id) {
+        return res.status(400).json({ message: 'ID do caso é obrigatório na rota.' });
+    }
+
+    // 1. Buscar o caso
+    const caso = casosRepository.findById(id);
     if (!caso) {
-        return res.status(404).json({ message: 'Caso não encontrado' });
+        return res.status(404).json({ message: 'Caso não encontrado com o ID fornecido.' });
     }
 
-    // 2. Usa o agente_id do caso para encontrar o agente
+    // 2. Verificar se o agente existe
     const agente = agentesRepository.findById(caso.agente_id);
-
     if (!agente) {
-        // Isso pode acontecer se o agente for deletado mas o caso não
-        return res.status(404).json({ message: 'Agente responsável por este caso não foi encontrado' });
+        return res.status(404).json({ message: 'Agente responsável pelo caso não foi encontrado. Ele pode ter sido removido.' });
     }
 
-    // 3. Retorna os dados completos do agente
-    res.status(200).json(agente);
+    // 3. Retornar agente
+    return res.status(200).json(agente);
 };
 
 

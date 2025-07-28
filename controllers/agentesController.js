@@ -47,15 +47,25 @@ const getAllAgentes = (req, res) => {
 }
 
     if (sort) {
+    const desc = sort.startsWith('-');
+    const field = desc ? sort.substring(1) : sort;
 
-        const desc = sort.startsWith('-');
-        const field = desc ? sort.substring(1) : sort;
-        results.sort((a, b) => {
-            if (a[field] < b[field]) return desc ? 1 : -1;
-            if (a[field] > b[field]) return desc ? -1 : 1;
-            return 0;
-        });
-    } 
+    results.sort((a, b) => {
+        let aValue = a[field];
+        let bValue = b[field];
+
+        // Conversão para Date se estiver ordenando por data
+        if (field === 'dataDeIncorporacao') {
+            aValue = new Date(aValue);
+            bValue = new Date(bValue);
+        }
+
+        if (aValue < bValue) return desc ? 1 : -1;
+        if (aValue > bValue) return desc ? -1 : 1;
+        return 0;
+    });
+}
+
 res.status(200).json(results);
 };
 

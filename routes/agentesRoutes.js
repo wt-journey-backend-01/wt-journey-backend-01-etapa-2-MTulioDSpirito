@@ -8,7 +8,25 @@ const agentesController = require('../controllers/agentesController');
  *   get:
  *     summary: Lista todos os agentes
  *     tags: [Agentes]
- *     description: Retorna uma lista de todos os agentes cadastrados.
+ *     description: >
+ *       Retorna uma lista de agentes. É possível aplicar filtro por cargo e ordenação por nome ou data de incorporação.
+ *       A ordenação aceita ordem crescente ou decrescente prefixando com `-`.
+ *     parameters:
+ *       - in: query
+ *         name: cargo
+ *         schema:
+ *           type: string
+ *         required: false
+ *         description: Filtra os agentes por cargo (exato, case-insensitive).
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *         required: false
+ *         description: >
+ *           Campo para ordenação dos resultados. Use o nome do campo para ordem crescente (`sort=nome`)
+ *           ou prefixe com `-` para ordem decrescente (`sort=-dataDeIncorporacao`).  
+ *           Campos suportados: `nome`, `dataDeIncorporacao`, `cargo`.
  *     responses:
  *       200:
  *         description: Lista de agentes retornada com sucesso.
@@ -19,6 +37,7 @@ const agentesController = require('../controllers/agentesController');
  *               items:
  *                 $ref: '#/components/schemas/Agente'
  */
+
 router.get('/', agentesController.getAllAgentes);
 
 /**
