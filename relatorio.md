@@ -1,161 +1,153 @@
 <sup>Esse é um feedback gerado por IA, ele pode conter erros.</sup>
 
-Você tem 3 créditos restantes para usar o sistema de feedback AI.
+Você tem 2 créditos restantes para usar o sistema de feedback AI.
 
 # Feedback para MTulioDSpirito:
 
 Nota final: **94.9/100**
 
-Olá, MTulioDSpirito! 👋🚔
+# Feedback para MTulioDSpirito 🚓✨
 
-Primeiramente, parabéns pelo seu empenho e pelo excelente trabalho na construção dessa API para o Departamento de Polícia! 🎉 Você alcançou uma nota muito alta (94.9/100) e isso reflete o quanto seu código está bem estruturado e funcional. Vamos juntos analisar os pontos fortes e também os detalhes que podem ser aprimorados para você chegar ao 100%!
+Olá, MTulioDSpirito! Tudo bem? 😄 Primeiro, quero te dar os parabéns pelo esforço e pela qualidade do seu código! 🎉 Você estruturou muito bem sua API para o Departamento de Polícia, com uma organização clara entre rotas, controllers e repositories — isso é fundamental para manter o projeto escalável e fácil de manter. Além disso, seu uso do **Joi** para validação está muito bem feito, com mensagens personalizadas e validações robustas. 👏👏
 
----
-
-## 🎯 Pontos Fortes e Conquistas Bônus
-
-- Sua organização do projeto está perfeita, seguindo a arquitetura modular com pastas separadas para **routes**, **controllers** e **repositories**. Isso é fundamental para a escalabilidade e manutenção do projeto. 👏
-  
-- A implementação dos endpoints básicos para **agentes** e **casos** está muito bem feita, com todos os métodos HTTP principais (GET, POST, PUT, PATCH, DELETE) implementados e funcionando corretamente.
-
-- A validação dos dados via **Joi** está muito bem estruturada, tanto para agentes quanto para casos, garantindo que os dados recebidos tenham o formato esperado.
-
-- Você conseguiu implementar filtros simples para os casos (por status e agente) e para agentes (por cargo), além de ordenação por data de incorporação. Isso já mostra um nível avançado de manipulação de dados em memória.
-
-- Também merece destaque a criação de mensagens de erro personalizadas para validação, mesmo que ainda haja espaço para melhorias (vou explicar isso já já).
+Também notei que você implementou vários filtros e ordenações, e isso é um diferencial enorme! Você conseguiu entregar filtros por status e agente nos casos, além de ordenação e filtro por data de incorporação nos agentes. Isso mostra que você foi além do básico, buscando entregar uma API rica e flexível. Parabéns pelo bônus conquistado! 🎖️
 
 ---
 
-## 🕵️‍♂️ Onde Você Pode Melhorar — Análise Detalhada
+## Vamos analisar juntos alguns pontos para aprimorar ainda mais seu trabalho? 🕵️‍♂️🔍
 
-### 1. Falha ao criar um caso com `agente_id` inválido (status 404 esperado)
+### 1. Sobre o erro na criação de casos com ID de agente inválido (status 404)
 
-Eu vi no seu arquivo `controllers/casosController.js` que você está validando se o `agente_id` existe antes de criar um caso, o que é ótimo:
-
-```js
-const agente = agentesRepository.findById(value.agente_id);
-if (!agente) {
-    return res.status(404).json({ message: 'Agente com o ID fornecido não foi encontrado' });
-}
-```
-
-Isso está correto e deveria garantir o status 404 quando o agente não existe. Porém, percebi que o teste de criação do caso com `agente_id` inválido está falhando. Isso pode indicar que:
-
-- Ou o `agentesRepository.findById` não está encontrando o agente corretamente (mas seu repositório está correto, então é improvável).
-
-- Ou o payload enviado na requisição não está chegando corretamente para o controller, talvez por causa de algum erro no middleware ou rota.
-
-**Mas ao analisar seu `routes/casosRoutes.js` e `server.js`, tudo parece estar configurado corretamente para JSON e roteamento.**
-
-Então, a hipótese mais provável é que o problema esteja no formato do UUID que você está validando no Joi:
+Você fez um ótimo trabalho validando o agente_id na criação de casos no `casosController.js`:
 
 ```js
-agente_id: joi.string().guid({ version: 'uuidv4' }).required().messages({
-    'string.guid': 'O agente_id deve ser um UUID válido.',
-    'string.empty': 'O agente_id é obrigatório.',
-    'any.required': 'O agente_id é obrigatório.'
-})
-```
+const createCaso = (req, res) => {
+    const { error, value } = casoSchema.validate(req.body);
 
-O Joi está esperando especificamente UUID versão 4. Se o UUID enviado na requisição para o teste for de outra versão (por exemplo, uuidv1), a validação falha e o erro não é tratado como 404, mas sim como 400 (erro de formato). Isso pode confundir o teste.
-
-**Solução sugerida:**  
-Permita que o Joi aceite qualquer versão de UUID, assim o erro de agente inexistente será tratado corretamente:
-
-```js
-agente_id: joi.string().guid({ version: ['uuidv4', 'uuidv1', 'uuidv5', 'uuidv3'] }).required().messages({
-    'string.guid': 'O agente_id deve ser um UUID válido.',
-    'string.empty': 'O agente_id é obrigatório.',
-    'any.required': 'O agente_id é obrigatório.'
-})
-```
-
-Ou simplesmente:
-
-```js
-agente_id: joi.string().guid({ version: 'uuid' }).required().messages({
-    'string.guid': 'O agente_id deve ser um UUID válido.',
-    'string.empty': 'O agente_id é obrigatório.',
-    'any.required': 'O agente_id é obrigatório.'
-})
-```
-
-Assim, o Joi só rejeitará formatos que não são UUIDs, mas aceitará qualquer versão válida.
-
----
-
-### 2. Falhas nos testes bônus de filtros avançados e mensagens de erro customizadas
-
-Você implementou vários filtros muito bons, mas alguns testes bônus indicam que:
-
-- A filtragem por data de incorporação com ordenação (crescente e decrescente) para agentes não está 100% alinhada com o esperado.
-
-- As mensagens de erro customizadas para argumentos inválidos (tanto para agentes quanto para casos) não estão exatamente conforme o requisito.
-
-Ao analisar seu `agentesController.js`, no método `getAllAgentes`, você tem:
-
-```js
-const { cargo, sort, dataDeIncorporacao } = req.query;
-
-if (dataDeIncorporacao) {
-    const data = new Date(dataDeIncorporacao);
-    if (isNaN(data.getTime())) {
-        return res.status(400).json({ message: 'dataDeIncorporacao inválida. Use o formato yyyy-mm-dd.' });
-    }
-    results = results.filter(a => new Date(a.dataDeIncorporacao) >= data);
-}
-```
-
-Aqui você faz a filtragem e valida a data, o que está certo. Porém, a mensagem de erro é genérica e pode não estar exatamente igual ao que o teste espera para erro customizado.
-
-**Dica para melhorar:**  
-Padronize as mensagens de erro para que sejam mais detalhadas e consistentes, por exemplo:
-
-```js
-return res.status(400).json({ 
-    message: "Parâmetro 'dataDeIncorporacao' inválido. Formato esperado: yyyy-mm-dd." 
-});
-```
-
-Também, no sorting, assegure que só campos válidos sejam aceitos no parâmetro `sort`, para evitar erros silenciosos:
-
-```js
-const validSortFields = ['nome', 'dataDeIncorporacao', 'cargo'];
-if (sort) {
-    const desc = sort.startsWith('-');
-    const field = desc ? sort.substring(1) : sort;
-
-    if (!validSortFields.includes(field)) {
-        return res.status(400).json({ message: `Campo para ordenação inválido: ${field}` });
+    if (error) {
+        const messages = error.details.map(detail => detail.message);
+        return res.status(400).json({ message: "Dados inválidos", errors: messages });
     }
 
-    results.sort((a, b) => {
-        if (a[field] < b[field]) return desc ? 1 : -1;
-        if (a[field] > b[field]) return desc ? -1 : 1;
-        return 0;
-    });
-}
+    const agente = agentesRepository.findById(value.agente_id);
+    if (!agente) {
+        return res.status(404).json({ message: 'Agente com o ID fornecido não foi encontrado' });
+    }
+
+    const novoCaso = casosRepository.create(value);
+    res.status(201).json(novoCaso);
+};
 ```
 
-Isso melhora a robustez e a clareza da API.
+Aqui o fluxo está correto: você valida o payload, confere se o agente existe e só então cria o caso.
+
+**Porém, o teste indicou que ao tentar criar um caso com um `agente_id` inválido ou inexistente, o status 404 esperado não foi retornado.**
+
+Isso sugere que, em algum momento, o `agentesRepository.findById(value.agente_id)` está retornando um agente mesmo quando não deveria, ou que o ID está sendo passado de forma incorreta.
+
+Vamos dar uma olhada no seu `agentesRepository.js`:
+
+```js
+const findById = (id) => {
+    return agentes.find(agente => agente.id === id);
+};
+```
+
+Aqui está um ponto importante: a comparação é feita com `===`, mas se o `id` passado tiver espaços extras (ex: `" 1234-uuid "`), a busca falhará. No `casosRepository.js`, você usou `.trim()` para limpar o ID antes da busca:
+
+```js
+const findById = (id) => {
+    return casos.find(caso => caso.id === id.trim());
+};
+```
+
+**Sugestão:** Para garantir consistência e evitar problemas com espaços em branco, faça o mesmo no `agentesRepository.js`:
+
+```js
+const findById = (id) => {
+    if (!id) return null;
+    return agentes.find(agente => agente.id === id.trim());
+};
+```
+
+Assim, você evita que IDs com espaços causem resultados incorretos.
 
 ---
 
-### 3. Sobre a filtragem de casos por palavras-chave no título e descrição
+### 2. Endpoint para buscar o agente responsável por um caso (bônus que não passou)
 
-Você implementou o filtro por texto no endpoint `/casos` e também criou um endpoint `/casos/search` para busca textual, o que é ótimo! 👍
-
-No entanto, o teste bônus indica que a filtragem por keywords no título e descrição não passou totalmente.
-
-No seu método `getAllCasos`, você tem:
+Você criou o endpoint `/casos/:id/agente` no `casosRoutes.js`:
 
 ```js
-if (q !== undefined && q.trim() === '') {
-    return res.status(400).json({ message: "O parâmetro 'q' não pode ser vazio." });
-}
+router.get('/:id/agente', casosController.getAgenteDoCaso);
+```
 
+E no controller:
+
+```js
+const getAgenteDoCaso = (req, res) => {
+    const { id } = req.params;
+
+    if (!id) {
+        return res.status(400).json({ message: 'ID do caso é obrigatório.' });
+    }
+
+    const caso = casosRepository.findById(id);
+    if (!caso) {
+        return res.status(404).json({ message: 'Caso não encontrado com o ID fornecido.' });
+    }
+
+    const agente = agentesRepository.findById(caso.agente_id);
+    if (!agente) {
+        return res.status(404).json({ message: 'Agente responsável pelo caso não foi encontrado.' });
+    }
+
+    res.status(200).json(agente);
+};
+```
+
+Esse código está correto e bem estruturado. A falha nos testes provavelmente está ligada à questão do `.trim()` que mencionamos, ou talvez o teste esperasse uma mensagem de erro ou formato de resposta específico.
+
+**Dica:** Sempre que você validar parâmetros, garanta que IDs sejam tratados uniformemente (com `.trim()`) para evitar problemas sutis.
+
+---
+
+### 3. Filtros por palavras-chave nos casos e filtro por data de incorporação com ordenação nos agentes (bônus que não passaram)
+
+Você implementou filtros por status e agente nos casos e filtro por cargo e ordenação nos agentes, mas alguns filtros e ordenações avançadas falharam:
+
+- Filtro por palavras-chave no título/descrição dos casos (endpoint `/casos` com query `q`)
+- Filtro por data de incorporação com ordenação nos agentes
+
+No `agentesController.js`, você tem o filtro por `dataDeIncorporacao` e ordenação em:
+
+```js
+const getAllAgentes = (req, res) => {
+    let results = agentesRepository.findAll();
+    const { cargo, sort, dataDeIncorporacao } = req.query;
+
+    // filtro por dataDeIncorporacao
+    if (dataDeIncorporacao) {
+        // validação da data...
+        results = results.filter(a => new Date(a.dataDeIncorporacao) >= date);
+    }
+
+    // ordenação
+    if (sort) {
+        // validação e ordenação...
+    }
+
+    res.status(200).json(results);
+};
+```
+
+O código parece correto. O que pode estar faltando é a combinação correta dos filtros e ordenação, ou um ajuste no formato da data para garantir que a ordenação funcione como esperado (por exemplo, comparar strings ISO é suficiente, mas se quiser garantir, pode converter para timestamps).
+
+Sobre a busca por palavras-chave nos casos, você tem:
+
+```js
 if (q) {
-    const query = q.toLowerCase();
+    const query = q.trim().toLowerCase();
     results = results.filter(caso =>
         caso.titulo.toLowerCase().includes(query) ||
         caso.descricao.toLowerCase().includes(query)
@@ -163,57 +155,128 @@ if (q) {
 }
 ```
 
-Isso está correto, mas o problema pode estar em não tratar outros parâmetros de filtro juntos com o `q` de forma esperada ou na falta de mensagens de erro mais claras.
+Isso está correto e eficiente.
 
-**Sugestão:**  
-Garanta que os filtros possam ser combinados e que as mensagens de erro sigam um padrão único para toda a API. Isso ajuda a passar nos testes de mensagens customizadas.
-
----
-
-### 4. Organização do projeto e arquivos extras
-
-Sua estrutura está muito boa! Porém, para alcançar a nota máxima e seguir a arquitetura recomendada, recomendo criar a pasta `utils/` e mover para lá um arquivo `errorHandler.js` para centralizar o tratamento de erros da API.
-
-Isso não é obrigatório, mas ajuda muito na organização e manutenção do código, além de facilitar a implementação de mensagens de erro personalizadas e reutilizáveis.
+**Sugestão:** Verifique se o endpoint `/casos` está corretamente configurado para receber e processar o parâmetro `q` e se não há conflito com o endpoint `/casos/search`, que também realiza busca por termo. Às vezes, duplicidade de endpoints pode causar confusão.
 
 ---
 
-## 📚 Recursos Recomendados para Você
+### 4. Mensagens de erro customizadas para argumentos inválidos
 
-Para fortalecer ainda mais seu conhecimento e corrigir esses detalhes, recomendo os seguintes materiais:
+Você fez um ótimo trabalho personalizando as mensagens de erro do Joi, por exemplo no `agentesController.js`:
 
-- **Validação de dados e mensagens de erro personalizadas com Joi:**  
-  https://youtu.be/yNDCRAz7CM8?si=Lh5u3j27j_a4w3A_ — Esse vídeo vai te ajudar a entender como criar validações robustas e mensagens claras.
+```js
+const agenteSchema = joi.object({
+  nome: joi.string().min(3).max(50).required(),
+  dataDeIncorporacao: joi.string()
+    .pattern(/^\d{4}-\d{2}-\d{2}$/)
+    .required()
+    .custom(...)
+    .messages({
+      'string.pattern.base': 'Data de incorporação deve estar no formato exato yyyy-mm-dd',
+    }),
+  cargo: joi.string().required()
+});
+```
 
-- **Fundamentos de API REST e Express.js (roteamento e organização):**  
-  https://expressjs.com/pt-br/guide/routing.html — Para garantir que seu roteamento está perfeito e organizado.
+E no `casosController.js`:
 
-- **Manipulação de arrays e filtros em JavaScript:**  
-  https://youtu.be/glSgUKA5LjE?si=t9G2NsC8InYAU9cI — Para aprimorar a filtragem, ordenação e manipulação dos dados em memória.
+```js
+const casoSchema = joi.object({
+    titulo: joi.string().required().messages({...}),
+    descricao: joi.string().required().messages({...}),
+    status: joi.string().valid('aberto', 'em andamento', 'solucionado').required().messages({...}),
+    agente_id: joi.string().guid({ version: [...] }).required().messages({...})
+});
+```
 
-- **Status HTTP e tratamento correto de erros:**  
-  https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/400  
-  https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/404 — Para entender bem quando usar cada código e como comunicar erros para o cliente.
+Porém, alguns testes de mensagens customizadas falharam.
+
+**Possível causa raiz:** A estrutura do objeto de resposta de erro pode não estar exatamente como esperado (por exemplo, usar `details` em vez de `errors`, ou vice-versa), ou as mensagens podem não estar exatamente iguais ao esperado.
+
+**Dica:** Para garantir que as mensagens customizadas sejam capturadas corretamente, padronize o formato da resposta de erro, como:
+
+```js
+if (error) {
+    const messages = error.details.map(d => d.message);
+    return res.status(400).json({ message: "Dados inválidos", errors: messages });
+}
+```
+
+Isso facilita a leitura e deixa o retorno consistente.
 
 ---
 
-## 📝 Resumo Rápido para Focar
+### 5. Organização da Estrutura de Diretórios
 
-- Ajuste a validação do `agente_id` no Joi para aceitar qualquer UUID válido, evitando rejeição indevida e garantindo o status 404 quando o agente não existir.
+Sua estrutura está muito boa e condiz com o esperado:
 
-- Padronize e detalhe melhor as mensagens de erro para parâmetros inválidos, especialmente para filtros como `dataDeIncorporacao` e `sort`.
+```
+.
+├── controllers
+│   ├── agentesController.js
+│   └── casosController.js
+├── repositories
+│   ├── agentesRepository.js
+│   └── casosRepository.js
+├── routes
+│   ├── agentesRoutes.js
+│   └── casosRoutes.js
+├── docs
+│   └── swagger.js
+├── server.js
+├── package.json
+```
 
-- Verifique se os filtros nos endpoints `/casos` e `/agentes` podem ser combinados e se retornam mensagens claras em caso de erro.
-
-- Considere criar um arquivo `utils/errorHandler.js` para centralizar o tratamento de erros e tornar seu código ainda mais organizado.
-
-- Continue usando os recursos recomendados para aprimorar sua validação, manipulação de dados e organização do código.
+Só senti falta da pasta `utils/` com o arquivo `errorHandler.js`, que foi sugerida para centralizar o tratamento de erros. Não é obrigatório, mas é uma boa prática para projetos maiores.
 
 ---
 
-MTulioDSpirito, você está no caminho certo e seu código mostra muita dedicação e conhecimento! 🚀 Continue assim, ajustando esses detalhes e você terá uma API robusta, clara e profissional. Qualquer dúvida, conte comigo para destrinchar qualquer ponto! 🙌
+## Recursos para você aprofundar e aprimorar ainda mais seu projeto 🚀
 
-Boa codificação e até a próxima! 👮‍♂️💻✨
+- **Validação e tratamento de erros em APIs com Express e Joi:**  
+  https://youtu.be/yNDCRAz7CM8?si=Lh5u3j27j_a4w3A_  
+  Vai te ajudar a entender melhor como estruturar validações e mensagens personalizadas.
+
+- **Roteamento e organização de rotas no Express:**  
+  https://expressjs.com/pt-br/guide/routing.html  
+  Fundamental para garantir que seus endpoints estejam configurados corretamente.
+
+- **Arquitetura MVC em Node.js:**  
+  https://youtu.be/bGN_xNc4A1k?si=Nj38J_8RpgsdQ-QH  
+  Para aprofundar na organização do projeto e garantir modularidade.
+
+- **Manipulação de arrays em JavaScript:**  
+  https://youtu.be/glSgUKA5LjE?si=t9G2NsC8InYAU9cI  
+  Isso é essencial para filtros, buscas e ordenações eficientes.
+
+---
+
+## Resumo rápido dos pontos principais para focar:
+
+- 🔍 Ajustar o método `findById` no `agentesRepository.js` para usar `.trim()` no parâmetro `id`, garantindo que IDs com espaços sejam tratados corretamente.
+
+- 📌 Verificar e padronizar o formato das mensagens de erro retornadas, principalmente para validações Joi, para que estejam consistentes e completas.
+
+- 🔄 Garantir que os filtros complexos (busca por palavra-chave nos casos, filtro por data e ordenação nos agentes) estejam funcionando juntos e sem conflito de rotas.
+
+- 🛠️ Avaliar a possibilidade de criar um middleware ou utilitário para centralizar o tratamento de erros (pasta `utils/errorHandler.js`), facilitando manutenção futura.
+
+- 🧹 Revisar os endpoints de busca (ex: `/casos` e `/casos/search`) para evitar duplicidade e garantir clareza no uso dos parâmetros de consulta.
+
+---
+
+### Finalizando...
+
+Você está no caminho certo! Seu código está organizado, com validações sólidas e uso correto do Express e do Joi. Os pequenos ajustes que sugeri vão te ajudar a destravar os últimos detalhes e deixar sua API impecável! 🚀
+
+Continue firme, pois você já domina conceitos importantes e está construindo uma base muito sólida para projetos futuros. Qualquer dúvida, estou aqui para te ajudar! 💪😉
+
+Boa codificação e sucesso! 👮‍♂️✨
+
+---
+
+Se precisar, não hesite em me chamar para mais revisões! Até a próxima! 👋😊
 
 > Caso queira tirar uma dúvida específica, entre em contato com o Chapter no nosso [discord](https://discord.gg/DryuHVnz).
 
