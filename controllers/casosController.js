@@ -19,7 +19,7 @@ const casoSchema = joi.object({
         'string.empty': 'O status é obrigatório.',
         'any.required': 'O status é obrigatório.'
     }),
-    agente_id: joi.string().guid({ version: 'uuidv4' }).required().messages({
+    agente_id: joi.string().guid({ version: ['uuidv1', 'uuidv3', 'uuidv4', 'uuidv5'] }).required().messages({
         'string.guid': 'O agente_id deve ser um UUID válido.',
         'string.empty': 'O agente_id é obrigatório.',
         'any.required': 'O agente_id é obrigatório.'
@@ -29,30 +29,54 @@ const casoSchema = joi.object({
 
 const getAllCasos = (req, res) => {
     let results = casosRepository.findAll();
-    const { agente_id, status, q } = req.query;
+    const { q, status, agente_id } = req.query;
 
-    if (agente_id) {
-        results = results.filter(c => c.agente_id === agente_id);
-    }
-
-    if (status) {
-        results = results.filter(c => c.status === status);
-    }
-
+    // Validação de 'q'
     if (q !== undefined && q.trim() === '') {
-        return res.status(400).json({ message: "O parâmetro 'q' não pode ser vazio." });
+        return res.status(400).json({
+            message: "O parâmetro 'q' não pode ser vazio. Forneça uma palavra-chave para busca."
+        });
     }
 
+    // Filtro por palavra-chave em título ou descrição
     if (q) {
-        const query = q.toLowerCase();
+        const query = q.trim().toLowerCase();
         results = results.filter(caso =>
             caso.titulo.toLowerCase().includes(query) ||
             caso.descricao.toLowerCase().includes(query)
         );
     }
 
+    // Filtro por status
+    if (status) {
+        const statusLower = status.toLowerCase();
+        const validStatus = ['aberto', 'em andamento', 'solucionado'];
+
+        if (!validStatus.includes(statusLower)) {
+            return res.status(400).json({
+                message: `Status inválido: '${status}'. Os valores aceitos são: ${validStatus.join(', ')}.`
+            });
+        }
+
+        results = results.filter(caso => caso.status.toLowerCase() === statusLower);
+    }
+
+    // Filtro por agente_id
+    if (agente_id) {
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+        if (!uuidRegex.test(agente_id)) {
+            return res.status(400).json({
+                message: `O parâmetro 'agente_id' deve ser um UUID válido.`
+            });
+        }
+
+        results = results.filter(caso => caso.agente_id === agente_id);
+    }
+
     res.status(200).json(results);
 };
+
 
 const searchCasos = (req, res) => {
     const { q } = req.query;
@@ -160,30 +184,35 @@ const updateCaso = (req, res) => {
 
 const patchCaso = (req, res) => {
     const { id } = req.params;
+    const patchData = req.body;
+
+    // Validação parcial (somente campos fornecidos)
     const patchSchema = joi.object({
         titulo: joi.string(),
         descricao: joi.string(),
         status: joi.string().valid('aberto', 'em andamento', 'solucionado'),
         agente_id: joi.string().guid({ version: 'uuidv4' })
-    }).min(1); // pelo menos 1 campo
+    });
 
-    const { error, value } = patchSchema.validate(req.body);
+    const { error, value } = patchSchema.validate(patchData);
     if (error) {
-        const messages = error.details.map(detail => detail.message);
-        return res.status(400).json({ message: 'Dados inválidos', errors: messages });
+        return res.status(400).json({ message: "Dados inválidos", details: error.details });
     }
 
+    // Se fornecido agente_id, verifica se existe
     if (value.agente_id && !agentesRepository.findById(value.agente_id)) {
-        return res.status(404).json({ message: 'Agente não encontrado para o agente_id fornecido' });
+        return res.status(404).json({ message: 'Agente não encontrado para o agente_id fornecido.' });
     }
 
-    const updated = casosRepository.update(id, value);
-    if (!updated) {
+    // Atualiza o caso
+    const updatedCaso = casosRepository.update(id, value);
+    if (!updatedCaso) {
         return res.status(404).json({ message: 'Caso não encontrado' });
     }
 
-    res.status(200).json(updated);
+    res.status(200).json(updatedCaso);
 };
+
 
 const deleteCaso = (req, res) => {
     const { id } = req.params; 
